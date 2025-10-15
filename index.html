@@ -1,0 +1,911 @@
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Vaxiliv - Animal Health & Vaccine Tracker</title><!-- PWA Manifest and Theme Color -->
+<meta name="theme-color" content="#065F46">
+<link rel="manifest" href="data:application/manifest+json;charset=utf-8,{
+    &quot;name&quot;: &quot;Vaxiliv - Animal Health & Vaccine Tracker&quot;,
+    &quot;short_name&quot;: &quot;Vaxiliv&quot;,
+    &quot;start_url&quot;: &quot;.&quot;,
+    &quot;display&quot;: &quot;standalone&quot;,
+    &quot;background_color&quot;: &quot;#F0FDF4&quot;,
+    &quot;theme_color&quot;: &quot;#065F46&quot;,
+    &quot;description&quot;: &quot;Your partner in animal health for tracking vaccinations, finding vets, and getting health tips.&quot;,
+    &quot;icons&quot;: [
+        {
+            &quot;src&quot;: &quot;assets/images/icons/icon-192.png&quot;,
+            &quot;sizes&quot;: &quot;192x192&quot;,
+            &quot;type&quot;: &quot;image/png&quot;
+        },
+        {
+            &quot;src&quot;: &quot;assets/images/icons/icon-512.png&quot;,
+            &quot;sizes&quot;: &quot;512x512&quot;,
+            &quot;type&quot;: &quot;image/png&quot;
+        }
+    ]
+}">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- LeafletJS for Map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+
+<style>
+    body {
+        font-family: 'Inter', sans-serif;
+        background-color: #F0FDF4; /* Lighter pale green for background */
+    }
+    .bg-pale-green { background-color: #D1FAE5; } /* Pale Green */
+    .text-dark-green { color: #065F46; }
+    .border-dark-green { border-color: #065F46; }
+    .accent-dark-green { accent-color: #065F46; }
+    .tab-active {
+        background-color: #065F46;
+        color: #FFFFFF;
+        border-color: #065F46;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        transform: translateY(-2px);
+    }
+    .tab-inactive {
+        background-color: #FFFFFF;
+        color: #065F46;
+        border-color: #D1FAE5;
+    }
+    .content-section {
+        display: none;
+    }
+    .content-section.active {
+        display: block;
+    }
+    .accordion-header {
+        transition: background-color 0.2s ease-in-out;
+    }
+    .accordion-header:hover {
+        background-color: #f9fafb;
+    }
+    .accordion-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.4s ease-in-out;
+    }
+    .schedule-card {
+        transition: all 0.3s ease;
+        animation: fadeIn 0.5s ease-out;
+    }
+    .schedule-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+
+    /* Schedule color coding */
+    .vaccine-row.completed {
+        background-color: #dcfce7; /* Light Green */
+    }
+    .vaccine-row.completed td {
+        text-decoration: line-through;
+        color: #3f6212;
+    }
+    .vaccine-row.pending {
+        background-color: #fee2e2; /* Light Red */
+    }
+     .vaccine-row.due {
+        background-color: #fef9c3; /* Light Yellow */
+    }
+
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s, visibility 0.3s;
+    }
+    .modal-overlay.visible {
+        opacity: 1;
+        visibility: visible;
+    }
+    .modal-content {
+        background: white;
+        padding: 24px;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 400px;
+        transform: scale(0.95);
+        transition: transform 0.3s;
+    }
+    .modal-overlay.visible .modal-content {
+        transform: scale(1);
+    }
+    
+    /* Leaflet custom popup */
+    .leaflet-popup-content-wrapper {
+        border-radius: 8px;
+    }
+    .leaflet-popup-content {
+        font-family: 'Inter', sans-serif;
+    }
+    .vet-popup h3 {
+        font-weight: 700;
+        color: #065F46;
+        margin: 0 0 4px;
+    }
+    .vet-popup p {
+        margin: 2px 0;
+        font-size: 12px;
+        color: #4b5563;
+    }
+    .vet-popup a {
+        display: block;
+        margin-top: 8px;
+        padding: 6px;
+        text-align: center;
+        background-color: #065F46;
+        color: white;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: background-color 0.2s;
+    }
+    .vet-popup a:hover {
+        background-color: #047857;
+    }
+
+</style>
+</head><body class="text-gray-800">
+
+<div id="app" class="max-w-lg mx-auto bg-white shadow-2xl rounded-lg min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-pale-green p-4 rounded-t-lg shadow-md">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <!-- Static Logo -->
+                <div class="w-12 h-12 rounded-full overflow-hidden bg-white border-2 border-dark-green flex items-center justify-center">
+                    <img src="assets/images/logo.svg" alt="Vaxiliv Logo" class="w-8 h-8">
+                </div>
+                <h1 class="text-2xl font-bold text-dark-green">Vaxiliv</h1>
+            </div>
+            <div>
+                 <select id="language-switcher" class="bg-white border border-dark-green text-dark-green text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full p-1.5">
+                    <option value="en">English</option>
+                    <option value="sw">Kiswahili</option>
+                    <option value="so">Soomaali</option>
+                </select>
+            </div>
+        </div>
+        <p class="text-sm text-dark-green mt-2 text-left" data-key="header_subtitle">Your Partner in Animal Health</p>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="grid grid-cols-4 gap-1 p-2 bg-pale-green text-xs">
+        <button data-tab="tips" class="tab-btn tab-active font-medium py-2 px-1 rounded-md transition-all duration-300" data-key="tab_tips">Health Tips</button>
+        <button data-tab="schedules" class="tab-btn tab-inactive font-medium py-2 px-1 rounded-md transition-all duration-300" data-key="tab_schedules">Schedules</button>
+        <button data-tab="locator" class="tab-btn tab-inactive font-medium py-2 px-1 rounded-md transition-all duration-300" data-key="tab_locator">Vet Locator</button>
+        <button data-tab="amr" class="tab-btn tab-inactive font-medium py-2 px-1 rounded-md transition-all duration-300" data-key="tab_amr">AMR Info</button>
+    </nav>
+
+    <main class="p-4 pb-16">
+
+        <!-- Health & Diet Tips Section -->
+        <section id="tips" class="content-section active">
+            <h2 class="text-xl font-bold text-dark-green mb-4" data-key="tips_title">Health & Diet Tips (Kenyan Context)</h2>
+            <div id="tips-accordion-container" class="space-y-3">
+                <!-- Health tips accordions populated by JS -->
+            </div>
+        </section>
+
+        <!-- Vaccination Schedules Section -->
+        <section id="schedules" class="content-section">
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
+                <h3 class="font-semibold text-lg mb-3" data-key="tracker_add_animal">Add Animal to My Schedules</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label for="animal-category" class="block text-sm font-medium text-gray-700" data-key="tracker_animal_category">Animal Category</label>
+                        <select id="animal-category" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md accent-dark-green">
+                            <!-- Options populated by JS -->
+                        </select>
+                    </div>
+                     <div>
+                        <label for="animal-type" class="block text-sm font-medium text-gray-700" data-key="tracker_animal_type">Animal Type</label>
+                         <div class="flex items-center space-x-3">
+                             <select id="animal-type" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md accent-dark-green">
+                                 <!-- Options populated by JS -->
+                             </select>
+                             <div id="animal-icon-preview" class="w-12 h-12 mt-1 flex items-center justify-center bg-gray-200 rounded-md overflow-hidden"></div>
+                         </div>
+                    </div>
+                     <div>
+                        <label for="animal-name" class="block text-sm font-medium text-gray-700" data-key="tracker_animal_name">Animal's Name / ID</label>
+                         <input type="text" id="animal-name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                    </div>
+                     <div>
+                        <label for="animal-dob" class="block text-sm font-medium text-gray-700" data-key="tracker_animal_dob">Date of Birth / Acquisition</label>
+                         <input type="date" id="animal-dob" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                    </div>
+                    <button id="add-animal-btn" class="w-full bg-dark-green text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-800 transition-all duration-200 transform hover:scale-105 active:scale-100 flex items-center justify-center space-x-2">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus-circle"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+                        <span data-key="tracker_add_button">Add to My Schedules</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="schedules-container" class="mt-6 space-y-4">
+                <!-- My animals' vaccination schedules will be displayed here -->
+            </div>
+            
+            <h2 class="text-xl font-bold text-dark-green mb-4 mt-8" data-key="schedules_title">General Schedules</h2>
+            <p class="text-gray-600 mb-4" data-key="schedules_subtitle">General vaccination and deworming guidelines for Kenya. Always consult a local vet.</p>
+            <div id="static-schedules-container" class="space-y-3">
+                <!-- Static schedules populated by JS -->
+            </div>
+        </section>
+
+        <!-- Vet Locator Section -->
+        <section id="locator" class="content-section">
+            <h2 class="text-xl font-bold text-dark-green mb-4" data-key="locator_title">Vet Locator</h2>
+             <p class="text-gray-600 mb-2" data-key="locator_subtitle">Find veterinary services near you.</p>
+             <div id="map" class="w-full h-96 rounded-lg border border-gray-300 shadow-sm bg-gray-200"></div>
+             <p id="map-status" class="text-xs text-center text-gray-500 mt-2" data-key="locator_map_loading">Locating...</p>
+        </section>
+
+        <!-- AMR Awareness Section -->
+        <section id="amr" class="content-section">
+            <h2 class="text-xl font-bold text-dark-green mb-4" data-key="amr_title">Antimicrobial Resistance (AMR)</h2>
+            <div class="space-y-4 text-gray-700">
+                <p data-key="amr_p1"></p>
+                <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md shadow-sm">
+                    <p class="font-bold" data-key="amr_problem_title">Why is this a problem?</p>
+                    <p data-key="amr_problem_p"></p>
+                </div>
+
+                <img src="assets/images/icons/amr-bacteria.svg" alt="Illustration of resistant bacteria spreading" class="rounded-lg shadow-md w-full object-cover h-48 bg-gray-100 p-4">
+
+                <h3 class="font-semibold text-lg text-dark-green pt-4" data-key="amr_one_health_title">A "One Health" Problem</h3>
+                <p data-key="amr_one_health_p"></p>
+                
+                <h3 class="font-semibold text-lg text-dark-green pt-4" data-key="amr_help_title">How You Can Help Prevent AMR:</h3>
+                <ul id="amr-help-list" class="list-none space-y-4">
+                    <!-- Populated by JS -->
+                </ul>
+                 <div class="pt-4">
+                    <a href="http://guidelines.health.go.ke:8000/media/National_Action_Plan_for_AMR_2023-2027_-_KENYA.pdf" target="_blank" rel="noopener noreferrer" class="text-dark-green hover:underline font-semibold" data-key="amr_read_more">Read More on Kenya's National Action Plan for AMR &rarr;</a>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="modal-overlay">
+    <div class="modal-content text-center">
+        <p id="modal-message" class="mb-4">Message goes here.</p>
+        <button id="modal-close" class="bg-dark-green text-white font-semibold py-2 px-6 rounded-lg hover:bg-green-800" data-key="modal_ok_button">OK</button>
+    </div>
+</div>
+
+<script>
+    // --- SERVICE WORKER REGISTRATION ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(registration => console.log('ServiceWorker registration successful'))
+                .catch(error => console.log('ServiceWorker registration failed: ', error));
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- STORAGE & STATE ---
+        const APP_STORAGE_KEY = 'vaxiliv_animals_v6';
+        const LANG_STORAGE_KEY = 'vaxiliv_language';
+        let animals = [];
+        let currentLang = 'en';
+        let map = null; // To hold the map instance
+
+        // --- IMAGE PATHS ---
+        const animalImages = {
+            dog: 'assets/images/animals/dog.svg',
+            cat: 'assets/images/animals/cat.svg',
+            cow: 'assets/images/animals/cow.svg',
+            goat: 'assets/images/animals/goat.svg',
+            chicken: 'assets/images/animals/chicken.svg',
+            sheep: 'assets/images/animals/sheep.svg',
+            camel: 'assets/images/animals/camel.svg',
+            donkey: 'assets/images/animals/donkey.svg',
+            turkey: 'assets/images/animals/turkey.svg',
+            duck: 'assets/images/animals/duck.svg'
+        };
+        const amrHelpImages = {
+            vet: 'assets/images/icons/vet.svg',
+            medicine: 'assets/images/icons/medicine.svg',
+            vaccine: 'assets/images/icons/vaccine.svg',
+            hygiene: 'assets/images/icons/hygiene.svg'
+        };
+        
+
+        // --- DATA (TRANSLATIONS & SCHEDULES) ---
+        const data = {
+            en: {
+                header_subtitle: "Your Partner in Animal Health",
+                tab_schedules: "Schedules", tab_locator: "Vet Locator", tab_tips: "Health Tips", tab_amr: "AMR Info",
+                tracker_add_animal: "Add Animal to My Schedules", tracker_animal_category: "Animal Category", tracker_animal_type: "Animal Type",
+                tracker_animal_name: "Animal's Name / ID", tracker_animal_dob: "Date of Birth / Acquisition", tracker_add_button: "Add to My Schedules",
+                schedules_title: "General Schedules", schedules_subtitle: "General vaccination and deworming guidelines for Kenya. Always consult a local vet.",
+                locator_title: "Vet Locator", locator_subtitle: "Find veterinary services near you.",
+                locator_map_loading: "Locating...",
+                locator_call_button: "Call Now",
+                tips_title: "Health & Diet Tips (Kenyan Context)",
+                amr_title: "Antimicrobial Resistance (AMR)",
+                amr_p1: "<strong>Antimicrobial Resistance (AMR)</strong> is a silent pandemic where germs (bacteria, viruses, fungi) evolve to survive treatments. When you use antibiotics on your animals, the weakest germs die, but the strongest can survive, multiply, and pass on their resistance. These 'superbugs' make common infections difficult or impossible to treat.",
+                amr_problem_title: "Why is this a critical problem?",
+                amr_problem_p: "Resistant infections lead to prolonged and severe illness, increased mortality rates in livestock, and huge economic losses for farmers due to treatment failure and lost production. Crucially, these resistant bacteria can transfer from animals to humans through direct contact, the environment (soil, water), and the food chain, threatening public health.",
+                amr_one_health_title: "A 'One Health' Emergency",
+                amr_one_health_p: "AMR isn't just an animal issue; it's a 'One Health' problem connecting the health of animals, humans, and our shared environment. The overuse of antibiotics in farming is a major driver of AMR globally. What happens on the farm doesn't stay on the farm—it impacts the entire ecosystem.",
+                amr_help_title: "How You Can Be Part of the Solution:",
+                amr_help_1: "<strong>Never self-prescribe antibiotics.</strong> Only use antimicrobials under the guidance of a qualified veterinarian after a proper diagnosis. Buying antibiotics over the counter and guessing the dosage is dangerous and fuels resistance.",
+                amr_help_2: "<strong>Administer the correct dose for the full duration.</strong> Under-dosing or stopping treatment early allows the most resistant bacteria to survive and thrive. Complete the prescribed course, even if the animal appears to have recovered.",
+                amr_help_3: "<strong>Focus on prevention.</strong> A robust vaccination program is your best defense. Healthy, vaccinated animals have stronger immune systems and are less likely to get sick and require antibiotics. Prevention is always cheaper and more effective than cure.",
+                amr_help_4: "<strong>Champion biosecurity and hygiene.</strong> Clean housing, proper waste management, clean water/feed, and controlled farm access (biosecurity) dramatically reduce the spread of disease, minimizing the need for antibiotics in the first place.",
+                amr_read_more: "Read More on Kenya's National Action Plan for AMR &rarr;",
+                modal_ok_button: "OK", modal_select_type: "Please select an animal type.", modal_enter_name: "Please enter a name or ID for the animal.", modal_enter_dob: "Please enter a valid date.",
+                animal_name_placeholder: "e.g., Simba, Cow-01",
+                cat_select_category: "Select Category", cat_select_type: "Select Type", cat_prompt_select_category: "First, select a category",
+                cat_small_animals: "Small Animals (Pets)", cat_large_animals: "Large Animals (Livestock)", cat_poultry: "Poultry",
+                animal_dog: "Dog", animal_cat: "Cat", animal_cow: "Cow", animal_goat: "Goat",
+                animal_sheep: "Sheep", animal_camel: "Camel", animal_donkey: "Donkey",
+                animal_chicken: "Chicken", animal_turkey: "Turkey", animal_duck: "Duck",
+                th_done: "Done", th_vaccine: "Vaccine/Dewormer", th_age: "Recommended Age", th_due_date: "Due Date",
+                tips_pets_title: "Dogs & Cats",
+                tips_pets_content: "<strong>Diet:</strong> Ensure access to clean water 24/7. High-quality commercial food is ideal as it's balanced. For home-cooked meals, lean minced meat, fish (omena), rice, and dog-safe vegetables (carrots, sweet potatoes) are good. <strong>Crucially, NEVER feed dogs cooked bones (they splinter), onions, garlic, grapes, or chocolate.</strong><br><br><strong>Health & Parasite Control:</strong> A strict deworming and ectoparasite (fleas, ticks) control schedule is vital in Kenya. Ticks transmit deadly diseases like Babesiosis ('tick fever'). Consult a vet for the best products (e.g., spot-ons, tablets). Watch for lethargy, loss of appetite, or pale gums—these are emergency signs.",
+                tips_cattle_title: "Cattle",
+                tips_cattle_content: "<strong>Feed & Nutrition:</strong> A balanced Total Mixed Ration (TMR) is key for productivity. Base feeds can be Napier grass, Boma Rhodes, or maize silage. Supplement with protein sources (dairy meal, cotton seed cake) and energy (maize germ). Provide a constant supply of a good quality mineral lick. Water is critical; a dairy cow can drink over 100 litres a day.<br><br><strong>Disease Prevention:</strong> Tick control is non-negotiable to prevent East Coast Fever (ECF), Anaplasmosis, and Babesiosis. Practice regular dipping or spraying. Isolate new animals (quarantine) for at least 3 weeks before they join the herd to monitor for disease.",
+                tips_goats_title: "Goats & Sheep",
+                tips_goats_content: "<strong>Feed & Management:</strong> These are browsers (goats) and grazers (sheep). They need diverse forage. Supplement with hay and specialized mineral salts. Proper housing, especially raised slatted floors, is crucial to prevent foot rot and reduce worm burden.<br><br><strong>Health:</strong> Internal parasites (worms like Haemonchus contortus) are a primary cause of death. Implement a strategic deworming program based on fecal tests (if possible) to avoid resistance. Vaccinate against PPR (Peste des Petits Ruminants) and CCPP (Contagious Caprine Pleuropneumonia) as they are devastating.",
+                tips_poultry_title: "Poultry (Kienyeji & Broilers)",
+                tips_poultry_content: "<strong>Biosecurity is #1:</strong> Your most important task. Use a footbath at the entrance, limit visitors, and prevent contact with wild birds. Use an 'All-In, All-Out' system where possible. Clean and disinfect the house thoroughly between flocks.<br><br><strong>Feed & Water:</strong> Water should be clean and fresh daily; dirty water spreads Coccidiosis and other diseases. Use appropriate commercial feeds for each stage (starter, grower, finisher/layer). For Kienyeji, supplementing with insects (like black soldier fly larvae) and greens improves health.<br><br><strong>Health:</strong> Newcastle Disease and Gumboro (IBD) can wipe out an entire flock in days. Follow the vaccination schedule religiously. Monitor birds daily for signs of sickness (huddling, ruffled feathers, coughing).",
+                schedules: { // Durations are in weeks from birth/previous event
+                    'Dog': [ { vaccine: 'Distemper, Hepatitis, Parvovirus (DHP)', age: '6-8 Weeks', duration: 6 }, { vaccine: 'DHP + Leptospirosis', age: '10-12 Weeks', duration: 4 }, { vaccine: 'DHP + Leptospirosis', age: '14-16 Weeks', duration: 4 }, { vaccine: 'Rabies', age: '16 Weeks', duration: 4 }, { vaccine: 'Annual Booster', age: 'Yearly', duration: 52 }, { vaccine: 'Deworming (Praziquantel/Pyrantel)', age: 'Every 3 months', duration: 12, recurring: true } ],
+                    'Cat': [ { vaccine: 'FVRCP (Core)', age: '8-9 Weeks', duration: 8 }, { vaccine: 'FVRCP (Booster)', age: '12-13 Weeks', duration: 4 }, { vaccine: 'Rabies', age: '16 Weeks', duration: 4 }, { vaccine: 'Annual Booster', age: 'Yearly', duration: 52 }, { vaccine: 'Deworming', age: 'Every 3 months', duration: 12, recurring: true } ],
+                    'Cow': [ { vaccine: 'Foot and Mouth Disease (FMD)', age: 'From 3 months', duration: 12 }, { vaccine: 'Lumpy Skin Disease (LSD)', age: 'From 4 months', duration: 16 }, { vaccine: 'Anthrax & Black Quarter', age: 'From 6 months', duration: 24 }, { vaccine: 'Rift Valley Fever (RVF)', age: 'From 6 months', duration: 24 }, { vaccine: 'Deworming (Albendazole, Ivermectin)', age: 'Strategically', duration: 16, recurring: true } ],
+                    'Goat': [ { vaccine: 'PPR', age: 'From 4 months', duration: 16 }, { vaccine: 'CCPP', age: 'From 3 months', duration: 12 }, { vaccine: 'Clostridial Diseases', age: 'From 2 months', duration: 8 }, { vaccine: 'Sheep & Goat Pox', age: 'From 3 months', duration: 12 }, { vaccine: 'Deworming', age: 'Every 3-4 months', duration: 14, recurring: true } ],
+                    'Sheep': [ { vaccine: 'PPR', age: 'From 4 months', duration: 16 }, { vaccine: 'Clostridial Diseases', age: 'From 2 months', duration: 8 }, { vaccine: 'Sheep & Goat Pox', age: 'From 3 months', duration: 12 }, { vaccine: 'Deworming', age: 'Every 3-4 months', duration: 14, recurring: true } ],
+                    'Chicken': [ { vaccine: 'Marek\'s Disease', age: 'Day 1 (at hatchery)', duration: 0 }, { vaccine: 'Newcastle + IB (1st dose)', age: 'Day 7', duration: 1 }, { vaccine: 'Gumboro (IBD) - 1st Dose', age: 'Day 14', duration: 1 }, { vaccine: 'Gumboro (IBD) - 2nd Dose', age: 'Day 21', duration: 1 }, { vaccine: 'Newcastle + IB (2nd dose)', age: 'Day 28', duration: 1 }, { vaccine: 'Fowl Pox', age: 'Week 6-8', duration: 4 }, { vaccine: 'Fowl Typhoid', age: 'Week 8', duration: 2 }, { vaccine: 'Deworming (Piperazine)', age: 'At 8 weeks, then every 2-3 months', duration: 0, recurring: true } ],
+                    'Camel': [], 'Donkey': [], 'Turkey': [], 'Duck': [] 
+                }
+            },
+            sw: {
+                header_subtitle: "Mshirika Wako Katika Afya ya Wanyama",
+                tab_schedules: "Ratiba", tab_locator: "Tafuta Daktari", tab_tips: "Ushauri wa Afya", tab_amr: "Kuhusu AMR",
+                tracker_add_animal: "Ongeza Mnyama Kwenye Ratiba Zangu", tracker_animal_category: "Aina ya Mnyama", tracker_animal_type: "Jamii ya Mnyama",
+                tracker_animal_name: "Jina / Kitambulisho cha Mnyama", tracker_animal_dob: "Tarehe ya Kuzaliwa / Kupatikana", tracker_add_button: "Ongeza Kwenye Ratiba",
+                schedules_title: "Ratiba za Jumla", schedules_subtitle: "Mwongozo wa jumla wa chanjo na minyoo Kenya. Wasiliana na daktari wa mifugo.",
+                locator_title: "Tafuta Daktari wa Mifugo", locator_subtitle: "Pata huduma za mifugo karibu nawe.",
+                locator_map_loading: "Inatafuta eneo...",
+                locator_call_button: "Piga Simu Sasa",
+                tips_title: "Ushauri wa Afya na Lishe (Kenya)",
+                amr_title: "Ukinzani dhidi ya Dawa (AMR)",
+                amr_p1: "<strong>Ukinzani dhidi ya Dawa (AMR)</strong> ni janga la kimya ambapo viini (bakteria, virusi, fangasi) hubadilika ili kustahimili matibabu. Unapotumia antibiotiki kwa wanyama wako, viini dhaifu hufa, lakini vile vyenye nguvu vinaweza kuishi, kuongezeka, na kurithisha ukinzani wao. Hawa 'wadudu sugu' hufanya maambukizi ya kawaida kuwa magumu au yasiyowezekana kutibu.",
+                amr_problem_title: "Kwa nini hili ni tatizo kubwa?",
+                amr_problem_p: "Maambukizi sugu husababisha magonjwa makali na ya muda mrefu, vifo vingi kwa mifugo, na hasara kubwa za kiuchumi kwa wakulima kutokana na matibabu kushindwa na upotevu wa uzalishaji. Muhimu zaidi, bakteria hawa sugu wanaweza kuhamia kutoka kwa wanyama kwenda kwa binadamu kupitia mgusano wa moja kwa moja, mazingira (udongo, maji), na mzunguko wa chakula, na hivyo kuhatarisha afya ya umma.",
+                amr_one_health_title: "Dharura ya 'Afya Moja'",
+                amr_one_health_p: "AMR si suala la wanyama pekee; ni tatizo la 'Afya Moja' linalounganisha afya ya wanyama, binadamu, na mazingira yetu tunayoshiriki. Matumizi mabaya ya antibiotiki katika ufugaji ni chanzo kikuu cha AMR duniani kote. Kinachotokea shambani hakiishii shambani—kinaathiri mfumo mzima wa ikolojia.",
+                amr_help_title: "Jinsi Unavyoweza Kuwa Sehemu ya Suluhisho:",
+                amr_help_1: "<strong>Kamwe usijitibie kwa antibiotiki.</strong> Tumia dawa hizi chini ya mwongozo wa daktari wa mifugo aliyehitimu baada ya utambuzi sahihi. Kununua antibiotiki bila cheti cha daktari na kukisia dozi ni hatari na huchochea ukinzani.",
+                amr_help_2: "<strong>Tumia dozi sahihi kwa muda wote uliopangwa.</strong> Dozi pungufu au kuacha matibabu mapema huruhusu bakteria sugu kuishi na kustawi. Maliza kozi iliyopendekezwa, hata kama mnyama anaonekana amepona.",
+                amr_help_3: "<strong>Zingatia kinga.</strong> Mpango thabiti wa chanjo ndiyo kinga yako bora. Wanyama wenye afya na waliochanjwa wana kinga imara na hawana uwezekano mkubwa wa kuugua na kuhitaji antibiotiki. Kinga daima ni rahisi na yenye ufanisi kuliko tiba.",
+                amr_help_4: "<strong>Imarisha usafi na usalama wa kibiolojia (biosecurity).</strong> Mabanda safi, usimamizi bora wa taka, maji/chakula safi, na kudhibiti uingiaji shambani hupunguza sana kuenea kwa magonjwa, na hivyo kupunguza hitaji la antibiotiki.",
+                amr_read_more: "Soma Zaidi kuhusu Mpango Kazi wa Kitaifa wa Kenya wa AMR &rarr;",
+                modal_ok_button: "Sawa", modal_select_type: "Tafadhali chagua aina ya mnyama.", modal_enter_name: "Tafadhali ingiza jina au kitambulisho cha mnyama.", modal_enter_dob: "Tafadhali ingiza tarehe halali.",
+                animal_name_placeholder: "k.m., Simba, Ng'ombe-01",
+                cat_select_category: "Chagua Aina", cat_select_type: "Chagua Jamii", cat_prompt_select_category: "Kwanza, chagua aina",
+                cat_small_animals: "Wanyama Wadogo (Pambo)", cat_large_animals: "Wanyama Wakubwa (Mifugo)", cat_poultry: "Ndege wa nyumbani",
+                animal_dog: "Mbwa", animal_cat: "Paka", animal_cow: "Ng'ombe", animal_goat: "Mbuzi",
+                animal_sheep: "Kondoo", animal_camel: "Ngamia", animal_donkey: "Punda",
+                animal_chicken: "Kuku", animal_turkey: "Bata mzinga", animal_duck: "Bata",
+                th_done: "Imefanyika", th_vaccine: "Chanjo/Dawa ya Minyoo", th_age: "Umri Unaopendekezwa", th_due_date: "Tarehe ya Mwisho",
+                tips_pets_title: "Mbwa na Paka",
+                tips_pets_content: "<strong>Lishe:</strong> Hakikisha wanapata maji safi masaa 24. Chakula bora cha kibiashara ni kizuri. Kwa mapishi ya nyumbani, tumia nyama ya kusaga, samaki (omena), wali, na mboga salama (karoti, viazi vitamu). <strong>Muhimu: USILISHE mbwa mifupa iliyopikwa, vitunguu, zabibu, au chokoleti.</strong><br><br><strong>Afya na Dawa za Vimelea:</strong> Ratiba kali ya dawa za minyoo na vimelea vya nje (viroboto, kupe) ni muhimu sana Kenya. Kupe husambaza magonjwa hatari kama Homa ya Kupe. Ongea na daktari kwa dawa bora. Angalia dalili za hatari kama uchovu, kukosa hamu ya kula, au ufizi mweupe.",
+                tips_cattle_title: "Ng'ombe",
+                tips_cattle_content: "<strong>Chakula:</strong> Mchanganyiko bora wa chakula (TMR) ni muhimu. Vyakula vikuu ni kama nyasi ya Napier, Boma Rhodes, au silage ya mahindi. Ongeza protini (dairy meal, mashudu ya pamba) na nishati (pumba za mahindi). Wape chumvi ya madini kila wakati. Maji ni muhimu sana; ng'ombe wa maziwa anakunywa lita zaidi ya 100 kwa siku.<br><br><strong>Kuzuia Magonjwa:</strong> Dawa ya kupe ni lazima kuzuia Homa ya Pwani (ECF), Anaplasmosis, na Babesiosis. Ogesha au nyunyizia dawa mara kwa mara. Tenga wanyama wapya kwa wiki 3 kabla ya kuwachanganya na wengine.",
+                tips_goats_title: "Mbuzi na Kondoo",
+                tips_goats_content: "<strong>Chakula na Usimamizi:</strong> Mbuzi hula majani ya juu na kondoo hula ya chini. Wanahitaji malisho mbalimbali. Ongeza nyasi kavu na chumvi maalum. Banda lililoinuliwa lenye sakafu ya mbao huzuia ugonjwa wa kuoza kwato na hupunguza minyoo.<br><br><strong>Afya:</strong> Minyoo ya tumboni ni chanzo kikuu cha vifo. Tumia mpango madhubuti wa kutoa dawa za minyoo. Chanja dhidi ya PPR na CCPP kwani ni magonjwa hatari sana.",
+                tips_poultry_title: "Kuku (Kienyeji & Broilers)",
+                tips_poultry_content: "<strong>Usalama wa Banda (#1):</strong> Hili ndilo jambo muhimu zaidi. Tumia dawa ya kuua viini mlangoni, zuia wageni, na uzuie kuku wako kuchangamana na ndege wa porini. Safisha na nyunyizia dawa banda lote kati ya kundi moja na jingine.<br><br><strong>Chakula na Maji:</strong> Maji yawe safi kila siku; maji machafu hueneza Coccidiosis. Tumia chakula cha kibiashara kulingana na umri (starter, grower, layer). Kwa Kienyeji, ongeza wadudu (kama funza wa black soldier) na mboga.<br><br><strong>Afya:</strong> Kideri (Newcastle) na Gumboro (IBD) huweza kuua kundi zima. Fuata ratiba ya chanjo kikamilifu. Angalia kuku kila siku kuona dalili za ugonjwa.",
+            },
+            so: {
+                header_subtitle: "Lammaanahaaga Caafimaadka Xoolaha",
+                tab_schedules: "Jadwalka", tab_locator: "Raadi Dhakhtar", tab_tips: "Talooyin Caafimaad", tab_amr: "Macluumaadka AMR",
+                tracker_add_animal: "Xayawaan ku dar Jadwalkayga", tracker_animal_category: "Qaybta Xayawaanka", tracker_animal_type: "Nooca Xayawaanka",
+                tracker_animal_name: "Magaca / Aqoonsiga Xayawaanka", tracker_animal_dob: "Taariikhda Dhalashada / Helitaanka", tracker_add_button: "Ku dar Jadwalkayga",
+                schedules_title: "Jadwalka Guud", schedules_subtitle: "Tilmaamaha guud ee tallaalka iyo gooryaanka ee Kenya. Had iyo jeer la tasho dhakhtar xoolaad.",
+                locator_title: "Goobta Dhakhtarka Xoolaha", locator_subtitle: "Ka hel adeegyada xanaanada xoolaha meel kuu dhow.",
+                locator_map_loading: "Goobta la raadinayo...",
+                locator_call_button: "Wac Hadda",
+                tips_title: "Talooyinka Caafimaadka & Cuntada (Kenya)",
+                amr_title: "Iska caabinta Daawooyinka (AMR)",
+                amr_p1: "<strong>Iska caabinta Daawooyinka (AMR)</strong> waa aafo aamusan oo jeermiska (bakteeriyada, fayrasyada, fangaska) ay u kobcaan si ay uga badbaadaan daawaynta. Markaad u isticmaasho antibiyootiga xoolahaaga, jeermiska ugu tabarta daran wuu dhintaa, laakiin kan ugu xooggan wuu badbaadi karaa, wuu tarmi karaa, wuxuuna u gudbin karaa iska caabintiisa. 'Superbugs'-kan ayaa ka dhigaya caabuqyada caadiga ah kuwo ay adag tahay ama aan suurtagal ahayn in la daweeyo.",
+                amr_problem_title: "Waa maxay sababta ay tani dhibaato halis ah u tahay?",
+                amr_problem_p: "Caabuqyada iska caabintu waxay keenaan xanuun dheer oo daran, heerarka dhimashada ee xoolaha oo kordha, iyo khasaare dhaqaale oo aad u weyn oo soo gaara beeralayda sababtoo ah daawaynta oo fashilantay iyo wax soo saarka oo luma. Waxa muhiim ah, bakteeriyadan iska caabisa waxay ka soo gudbi kartaa xoolaha una gudbi kartaa dadka iyada oo loo marayo taabasho toos ah, deegaanka (ciidda, biyaha), iyo silsiladda cuntada, taas oo khatar gelinaysa caafimaadka dadweynaha.",
+                amr_one_health_title: "Xaalad Degdeg ah oo 'Hal Caafimaad'",
+                amr_one_health_p: "AMR maaha arrin xoolaha oo kaliya; waa dhibaato 'Hal Caafimaad' oo isku xidha caafimaadka xoolaha, dadka, iyo deegaankeena aan wadaagno. Isticmaalka xad-dhaafka ah ee antibiyootiga ee beeraha waa mid ka mid ah waxyaabaha ugu waaweyn ee keena AMR adduunka oo dhan. Waxa ka dhaca beeraha kuma eka oo kaliya beeraha—waxay saamaysaa nidaamka deegaanka oo dhan.",
+                amr_help_title: "Sida Aad Qayb Uga Noqon Karto Xalka:",
+                amr_help_1: "<strong>Weligaa ha iskaa u qorin antibiyootiko.</strong> Kaliya isticmaal daawooyinka jeermiska dila iyada oo uu ku hagayo dhakhtar xoolaad oo aqoon u leh ka dib baadhitaan sax ah. Iibsashada antibiyootiga farmashiyaha iyo qiyaasida qiyaasta waa khatar waxayna hurinaysaa iska caabinta.",
+                amr_help_2: "<strong>Sii qiyaasta saxda ah muddada oo dhan.</strong> Qiyaasta oo la dhimo ama daawaynta oo goor hore la joojiyo waxay u oggolaanaysaa bakteeriyada ugu iska caabinta badan inay badbaado oo ay korto. Dhamaystir koorsada laguu qoray, xitaa haddii xayawaanku u muuqdo inuu soo roonaaday.",
+                amr_help_3: "<strong>Diirada saar ka hortagga.</strong> Barnaamij tallaal oo adag ayaa ah difaacaaga ugu fiican. Xoolaha caafimaadka qaba ee la tallaalay waxay leeyihiin habdhiska difaaca oo xooggan waxayna u yar tahay inay bukoodaan oo ay u baahdaan antibiyootiko. Ka hortaggu mar walba wuu ka jaban yahay wuuna ka waxtar badan yahay daawaynta.",
+                amr_help_4: "<strong>Horyaal u noqo nadaafadda iyo badbaadada noolaha.</strong> Guryaha nadiifka ah, maaraynta qashinka ee habboon, biyo/cuno nadiif ah, iyo helitaanka beerta oo la xakameeyo (badbaadada noolaha) waxay si weyn u yareeyaan faafitaanka cudurrada, iyagoo yareynaya baahida loo qabo antibiyootiga meesha ugu horreysa.",
+                amr_read_more: "Wax Badan Ka Akhriso Qorshaha Waxqabadka Qaranka Kenya ee AMR &rarr;",
+                modal_ok_button: "Hagaag", modal_select_type: "Fadlan dooro nooca xayawaanka.", modal_enter_name: "Fadlan geli magaca ama aqoonsiga xayawaanka.", modal_enter_dob: "Fadlan geli taariikh sax ah.",
+                animal_name_placeholder: "tusaale, Simba, Lo'-01",
+                cat_select_category: "Dooro Qayb", cat_select_type: "Dooro Nooc", cat_prompt_select_category: "Marka hore, dooro qayb",
+                cat_small_animals: "Xayawaanka Yaryar (Rabaayado)", cat_large_animals: "Xayawaanka Waaweyn (Xoolo)", cat_poultry: "Digaag",
+                animal_dog: "Ey", animal_cat: "Bisad", animal_cow: "Lo'", animal_goat: "Ari",
+                animal_sheep: "Ido", animal_camel: "Geel", animal_donkey: "Dameer",
+                animal_chicken: "Digaag", animal_turkey: "Digaag-turki", animal_duck: "Bata",
+                th_done: "La sameeyay", th_vaccine: "Tallaal/Daawo Gooryaan", th_age: "Da'da Lagu Taliyey", th_due_date: "Taariikhda la rabo",
+                tips_pets_title: "Eeyaha & Bisadaha",
+                tips_pets_content: "<strong>Cunto:</strong> Hubi helitaanka biyo nadiif ah 24/7. Cuntada ganacsiga ee tayada sare leh ayaa ugu habboon. Cuntooyinka guriga lagu kariyey, hilibka shiidan, kalluunka (omena), bariiska, iyo khudaarta eeyaha u fiican (karootada, baradhada macaan) way wanaagsan yihiin. <strong>Muhiim: Weligaa ha siin eeyaha lafo la kariyey (way jajabaan), basasha, toonta, canabka, ama shukulaatada.</strong><br><br><strong>Caafimaadka & Xakamaynta Dulinka:</strong> Jadwal adag oo gooryaan iyo dulin-ka-saaris (boodada, shilinta) ayaa muhiim u ah Kenya. Shilintu waxay gudbisaa cudurro dilaa ah sida Babesiosis. La tasho dhakhtar xoolaad si aad u hesho daawooyinka ugu fiican. Iska ilaali caajis, cunto xumo, ama cirid cirro leh—kuwani waa calaamado degdeg ah.",
+                tips_cattle_title: "Lo'da",
+                tips_cattle_content: "<strong>Cunto & Nafaqo:</strong> Cunto isku dhafan (TMR) ayaa fure u ah wax soo saarka. Cuntooyinka aasaasiga ah waxay noqon karaan cawska Napier, Boma Rhodes, ama silage galley. Ku kab borotiin (dairy meal, cake cudbi) iyo tamar (germ galley). Sii milix macdan oo joogto ah. Biyuhu waa muhiim; sac caano ah wuxuu cabbi karaa in ka badan 100 litir maalintii.<br><br><strong>Ka Hortagga Cudurrada:</strong> Xakamaynta shilinta waa lama huraan si looga hortago Qandhada Xeebta Bari (ECF), Anaplasmosis, iyo Babesiosis. Ku celceli qubeyska ama buufinta joogtada ah. Go'doomi xoolaha cusub (karantiil) ugu yaraan 3 toddobaad ka hor inta aysan ku biirin adhiga.",
+                tips_goats_title: "Ariga & Idaha",
+                tips_goats_content: "<strong>Cunto & Maareyn:</strong> Kuwani waa daaqayaal. Waxay u baahan yihiin daaq kala duwan. Ku kab caws iyo milix macdan oo gaar ah. Guryaha habboon, gaar ahaan dabaqyada sare, ayaa muhiim u ah ka hortagga qudhunka raafka iyo yaraynta gooryaanka.<br><br><strong>Caafimaadka:</strong> Gooryaanka caloosha ayaa ah sababta ugu weyn ee dhimashada. Hirgeli barnaamij istiraatiiji ah oo gooryaan-saaris ah. Ka tallaal PPR iyo CCPP maadaama ay yihiin cudurro wax baabi'iya.",
+                tips_poultry_title: "Digaaga (Digaaga Dalka & Broilers)",
+                tips_poultry_content: "<strong>Badbaadada Noolaha (#1):</strong> Hawshaada ugu muhiimsan. Isticmaal saxan jeermis-dile ah albaabka, xaddid booqdayaasha, kana ilaali inay la kulmaan shimbiraha duurjoogta ah. Nadiifi oo jeermi-dil aqalka inta u dhaxaysa digaag kasta.<br><br><strong>Cunto & Biyo:</strong> Biyuhu waa inay nadiif ahaadaan maalin kasta; biyaha wasakhaysan waxay faafiyaan Coccidiosis. Isticmaal cunto ganacsi oo ku habboon marxalad kasta. Digaaga dalka, ku kab cayayaan iyo cagaar.<br><br><strong>Caafimaadka:</strong> Cudurka Newcastle iyo Gumboro (IBD) waxay tirtiri karaan digaag dhan. Si adag u raac jadwalka tallaalka. Maalin kasta la soco calaamadaha jirrada.",
+            }
+        };
+        
+        // Inherit English data for missing translations and copy schedules
+        data.sw = {...data.en, ...data.sw};
+        data.so = {...data.en, ...data.so};
+        data.sw.schedules = JSON.parse(JSON.stringify(data.en.schedules));
+        data.so.schedules = JSON.parse(JSON.stringify(data.en.schedules));
+
+
+        // --- ELEMENTS ---
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const contentSections = document.querySelectorAll('.content-section');
+        const animalCategorySelect = document.getElementById('animal-category');
+        const animalTypeSelect = document.getElementById('animal-type');
+        const addAnimalBtn = document.getElementById('add-animal-btn');
+        const schedulesContainer = document.getElementById('schedules-container');
+        const staticSchedulesContainer = document.getElementById('static-schedules-container');
+        const tipsAccordionContainer = document.getElementById('tips-accordion-container');
+        const modal = document.getElementById('modal');
+        const modalMessage = document.getElementById('modal-message');
+        const modalCloseBtn = document.getElementById('modal-close');
+        const languageSwitcher = document.getElementById('language-switcher');
+        const animalIconPreview = document.getElementById('animal-icon-preview');
+
+
+        // --- FUNCTIONS ---
+        function initMap() {
+            if (map) {
+                // If map is already initialized, just ensure its size is correct, especially if the container was hidden.
+                setTimeout(() => map.invalidateSize(), 100);
+                return;
+            }
+            const mapStatus = document.getElementById('map-status');
+            const defaultCoords = [-1.286389, 36.817223]; // Nairobi
+
+            map = L.map('map').setView(defaultCoords, 12);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            // Try to get user's location
+            map.locate({setView: true, maxZoom: 14});
+
+            function onLocationFound(e) {
+                L.marker(e.latlng).addTo(map).bindPopup("You are here").openPopup();
+                L.circle(e.latlng, e.accuracy).addTo(map);
+                mapStatus.textContent = data[currentLang].locator_map_loading.replace('...', 'near you');
+            }
+
+            function onLocationError(e) {
+                 mapStatus.textContent = currentLang === 'sw' ? 'Iko Nairobi (kwa onyesho hili)' : 'Map centered on Nairobi (demo)';
+            }
+
+            map.on('locationfound', onLocationFound);
+            map.on('locationerror', onLocationError);
+
+            const vets = [
+                { name: 'Small Five Vet Clinic', coords: [-1.2838, 36.7844], tel: '+254722519148', address: 'Kilimani, Nairobi' },
+                { name: 'Lavington Vet', coords: [-1.2789, 36.7725], tel: '+254722529279', address: 'Lavington, Nairobi' },
+                { name: 'Hardy Veterinary Clinic', coords: [-1.3499, 36.7501], tel: '+254733600988', address: 'Karen, Nairobi' },
+                { name: 'Westlands Vet Clinic', coords: [-1.2618, 36.8010], tel: '+254722706691', address: 'Westlands, Nairobi' },
+                { name: 'Juja Veterinary Clinic', coords: [-1.1085, 37.0179], tel: '+254712345678', address: 'Gachororo, Juja' },
+                { name: 'JKUAT Animal Health', coords: [-1.0898, 37.0107], tel: '+254733445566', address: 'JKUAT Main Campus' },
+                { name: 'Thika Animal Care', coords: [-1.0473, 37.0782], tel: '+254711223344', address: 'Thika Town, Section 9' },
+            ];
+
+            const vetIcon = L.icon({
+                iconUrl: 'assets/images/icons/vet-map-pin.svg',
+                iconSize: [32, 40],
+                iconAnchor: [16, 40],
+                popupAnchor: [0, -40]
+            });
+            
+            vets.forEach(vet => {
+                const popupContent = `
+                    <div class="vet-popup">
+                        <h3>${vet.name}</h3>
+                        <p>${vet.address}</p>
+                        <a href="tel:${vet.tel}">${data[currentLang].locator_call_button}</a>
+                    </div>
+                `;
+                L.marker(vet.coords, {icon: vetIcon}).addTo(map)
+                    .bindPopup(popupContent);
+            });
+        }
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            const t = data[lang];
+            
+            document.querySelectorAll('[data-key]').forEach(el => {
+                const key = el.dataset.key;
+                if (t && t[key]) {
+                    el.innerHTML = t[key];
+                } else { // Fallback to English if translation is missing
+                    el.innerHTML = data.en[key] || '';
+                }
+            });
+            document.getElementById('animal-name').placeholder = t.animal_name_placeholder;
+            populateAnimalCategorySelect();
+            populateAnimalTypeSelect();
+            renderAllSchedules();
+            renderStaticSchedules();
+            renderHealthTips();
+            renderAmrHelpList();
+            localStorage.setItem(LANG_STORAGE_KEY, lang);
+        }
+        
+        function populateAnimalCategorySelect() {
+            const t = data[currentLang];
+            animalCategorySelect.innerHTML = `
+                <option value="">${t.cat_select_category}</option>
+                <option value="small">${t.cat_small_animals}</option>
+                <option value="large">${t.cat_large_animals}</option>
+                <option value="poultry">${t.cat_poultry}</option>
+            `;
+        }
+
+        function populateAnimalTypeSelect() {
+            const t = data[currentLang];
+            const category = animalCategorySelect.value;
+            const animalOptions = {
+                small: ['dog', 'cat'],
+                large: ['cow', 'goat', 'sheep', 'camel', 'donkey'],
+                poultry: ['chicken', 'turkey', 'duck']
+            };
+
+            let optionsHTML = `<option value="">${ category ? t.cat_select_type : t.cat_prompt_select_category }</option>`;
+            if (category && animalOptions[category]) {
+                animalOptions[category].forEach(animalKey => {
+                    optionsHTML += `<option value="${animalKey}">${t['animal_' + animalKey]}</option>`;
+                });
+            }
+            animalTypeSelect.innerHTML = optionsHTML;
+            updateAnimalIconPreview();
+        }
+
+        function updateAnimalIconPreview() {
+            const selectedType = animalTypeSelect.value;
+            if (selectedType && animalImages[selectedType]) {
+                animalIconPreview.innerHTML = `<img src="${animalImages[selectedType]}" alt="${selectedType}" class="w-full h-full object-contain p-1">`;
+            } else {
+                animalIconPreview.innerHTML = '';
+            }
+        }
+
+        function showModal(messageKey) {
+            modalMessage.textContent = data[currentLang][messageKey];
+            modal.classList.add('visible');
+        }
+
+        function hideModal() {
+            modal.classList.remove('visible');
+        }
+
+        function saveAnimals() {
+            localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(animals));
+        }
+
+        function loadAnimals() {
+            const storedAnimals = localStorage.getItem(APP_STORAGE_KEY);
+            if (storedAnimals) {
+                animals = JSON.parse(storedAnimals);
+            }
+        }
+        
+        function renderAllSchedules() {
+            schedulesContainer.innerHTML = '';
+            if (animals.length === 0) {
+                 schedulesContainer.innerHTML = `<p class="text-center text-gray-500 italic">Your tracked schedules will appear here.</p>`;
+            } else {
+                animals.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+                animals.forEach(animal => renderScheduleCard(animal));
+            }
+        }
+        
+        function createAccordionItem(id, title, content, image = '') {
+             const imageTag = image ? `<img src="${image}" alt="${title}" class="w-16 h-16 rounded-md object-contain p-1 mr-4 bg-gray-100">` : '';
+             return `
+                <div class="accordion-item bg-gray-50 border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                    <button class="accordion-header w-full text-left p-4 font-semibold flex justify-between items-center">
+                        <span class="flex items-center">
+                            ${imageTag}
+                            <span class="text-lg">${title}</span>
+                        </span>
+                        <svg class="w-6 h-6 transform transition-transform text-dark-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div class="accordion-content px-4 pb-4 text-gray-700 leading-relaxed">${content}</div>
+                </div>
+            `;
+        }
+
+        function renderHealthTips() {
+            const t = data[currentLang];
+            const tips = [
+                { title: t.tips_pets_title, content: t.tips_pets_content, image: animalImages.dog },
+                { title: t.tips_cattle_title, content: t.tips_cattle_content, image: animalImages.cow },
+                { title: t.tips_goats_title, content: t.tips_goats_content, image: animalImages.goat },
+                { title: t.tips_poultry_title, content: t.tips_poultry_content, image: animalImages.chicken }
+            ];
+            tipsAccordionContainer.innerHTML = tips.map(tip => createAccordionItem(null, tip.title, tip.content, tip.image)).join('');
+            addAccordionListeners('#tips-accordion-container');
+        }
+
+        function renderAmrHelpList() {
+             const t = data[currentLang];
+             const amrList = document.getElementById('amr-help-list');
+             const items = [
+                 { key: 'amr_help_1', img: amrHelpImages.vet },
+                 { key: 'amr_help_2', img: amrHelpImages.medicine },
+                 { key: 'amr_help_3', img: amrHelpImages.vaccine },
+                 { key: 'amr_help_4', img: amrHelpImages.hygiene }
+             ];
+             amrList.innerHTML = items.map(item => `
+                 <li class="flex items-start space-x-3">
+                     <img src="${item.img}" alt="Icon" class="w-16 h-16 rounded-lg object-contain p-2 bg-gray-100">
+                     <div>${t[item.key]}</div>
+                 </li>
+             `).join('');
+        }
+
+        function renderStaticSchedules() {
+            const t = data[currentLang];
+            let contentHTML = '';
+            const animalOrder = ['dog', 'cat', 'cow', 'goat', 'sheep', 'chicken'];
+
+            animalOrder.forEach(animalKey => {
+                const animalKeyCap = animalKey.charAt(0).toUpperCase() + animalKey.slice(1);
+                const scheduleData = t.schedules[animalKeyCap];
+                if(!scheduleData || scheduleData.length === 0) return;
+                
+                const animalName = t[`animal_${animalKey}`];
+                let tableHTML = `<div class="overflow-x-auto"><table class="w-full text-sm text-left">
+                    <thead class="bg-pale-green text-dark-green">
+                        <tr><th class="p-2">${t.th_vaccine}</th><th class="p-2">${t.th_age}</th></tr>
+                    </thead><tbody>`;
+                scheduleData.forEach(item => {
+                    tableHTML += `<tr class="border-b hover:bg-gray-100"><td class="p-2 font-medium">${item.vaccine}</td><td class="p-2">${item.age}</td></tr>`;
+                });
+                tableHTML += `</tbody></table></div>`;
+                contentHTML += createAccordionItem(animalKey, animalName, tableHTML, animalImages[animalKey]);
+            });
+            staticSchedulesContainer.innerHTML = contentHTML;
+            addAccordionListeners('#static-schedules-container');
+        }
+        
+        function addAccordionListeners(containerSelector) {
+            const container = document.querySelector(containerSelector);
+            if (!container) return;
+            
+            const headers = container.querySelectorAll('.accordion-header');
+            headers.forEach(header => {
+                header.addEventListener('click', () => {
+                    const item = header.parentElement;
+                    const content = item.querySelector('.accordion-content');
+                    const icon = header.querySelector('svg:last-child');
+                    const isOpened = content.style.maxHeight && content.style.maxHeight !== '0px';
+
+                    // Close all accordions in the same container
+                    item.parentElement.querySelectorAll('.accordion-content').forEach(el => el.style.maxHeight = null);
+                    item.parentElement.querySelectorAll('.accordion-header svg:last-child').forEach(el => el.classList.remove('rotate-180'));
+
+                    if (!isOpened) {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        icon.classList.add('rotate-180');
+                    }
+                });
+            });
+        }
+
+
+        function switchTab(tab) {
+            tabButtons.forEach(btn => {
+                btn.classList.toggle('tab-active', btn.dataset.tab === tab);
+                btn.classList.toggle('tab-inactive', btn.dataset.tab !== tab);
+            });
+            contentSections.forEach(section => {
+                section.classList.toggle('active', section.id === tab);
+            });
+
+            if (tab === 'locator') {
+                initMap();
+            }
+        }
+        
+        function getDueDate(startDate, weeks) {
+            const date = new Date(startDate);
+            date.setDate(date.getDate() + weeks * 7);
+            return date;
+        }
+
+        function renderScheduleCard(animal) {
+            const t = data[currentLang];
+            const animalTypeKeyCap = animal.type.charAt(0).toUpperCase() + animal.type.slice(1);
+            const scheduleData = t.schedules[animalTypeKeyCap] || [];
+            const scheduleCard = document.createElement('div');
+            scheduleCard.className = 'bg-white p-4 rounded-lg border border-gray-200 shadow-lg schedule-card';
+            scheduleCard.dataset.id = animal.id;
+            
+            let tableHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex items-center space-x-4">
+                         <img src="${animalImages[animal.type]}" alt="${animal.type}" class="w-16 h-16 rounded-lg object-contain p-1 border-2 border-pale-green bg-gray-100">
+                        <div>
+                            <h3 class="font-bold text-xl text-dark-green">${animal.name}</h3>
+                            <p class="text-md text-gray-600">${t[`animal_${animal.type}`]}</p>
+                        </div>
+                    </div>
+                    <button class="remove-btn text-red-500 hover:text-red-700 font-bold text-2xl leading-none">&times;</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-pale-green text-dark-green">
+                            <tr>
+                                <th class="p-2 w-10">${t.th_done}</th>
+                                <th class="p-2">${t.th_vaccine}</th>
+                                <th class="p-2">${t.th_due_date}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            const dob = new Date(animal.dob);
+            const today = new Date();
+            today.setHours(0,0,0,0);
+
+            scheduleData.forEach((item, index) => {
+                const dueDate = getDueDate(dob, item.duration);
+                const isCompleted = animal.completed[index];
+                
+                let rowClass = ''; // Default/white
+                if (isCompleted) {
+                    rowClass = 'completed';
+                } else if (dueDate < today) {
+                    rowClass = 'pending'; // Overdue is red
+                } else if (dueDate.getTime() <= today.getTime() + (7 * 24 * 60 * 60 * 1000)) {
+                    rowClass = 'due'; // Due within a week is yellow
+                }
+
+                tableHTML += `
+                    <tr class="vaccine-row ${rowClass}" data-index="${index}">
+                        <td class="p-2 text-center"><input type="checkbox" class="h-5 w-5 rounded border-gray-400 text-green-600 focus:ring-green-500 accent-dark-green vaccine-checkbox" ${isCompleted ? 'checked' : ''}></td>
+                        <td class="p-2 font-medium">${item.vaccine}</td>
+                        <td class="p-2">${dueDate.toLocaleDateString()}</td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += '</tbody></table></div>';
+            scheduleCard.innerHTML = tableHTML;
+            
+            schedulesContainer.appendChild(scheduleCard);
+        }
+
+        function handleAddAnimal() {
+            const type = animalTypeSelect.value;
+            const name = document.getElementById('animal-name').value.trim();
+            const dob = document.getElementById('animal-dob').value;
+            
+            if (!type) { showModal('modal_select_type'); return; }
+            if (!name) { showModal('modal_enter_name'); return; }
+            if (!dob) { showModal('modal_enter_dob'); return; }
+
+            const animalTypeKeyCap = type.charAt(0).toUpperCase() + type.slice(1);
+            const scheduleData = data.en.schedules[animalTypeKeyCap] || [];
+            
+            const newAnimal = {
+                id: Date.now().toString(),
+                createdAt: new Date().toISOString(),
+                name: name,
+                type: type,
+                dob: dob,
+                completed: new Array(scheduleData.length).fill(false)
+            };
+
+            animals.push(newAnimal);
+            saveAnimals();
+            renderAllSchedules(); 
+            
+            document.getElementById('animal-name').value = '';
+            document.getElementById('animal-dob').value = '';
+            animalCategorySelect.value = '';
+            populateAnimalTypeSelect();
+        }
+        
+        function handleScheduleInteraction(e) {
+            const target = e.target;
+            const card = target.closest('.schedule-card');
+            if (!card) return;
+
+            if (target.classList.contains('vaccine-checkbox')) {
+                const animal = animals.find(a => a.id === card.dataset.id);
+                if(animal) {
+                    const row = target.closest('tr.vaccine-row');
+                    const rowIndex = parseInt(row.dataset.index);
+                    animal.completed[rowIndex] = target.checked;
+                    saveAnimals();
+                    renderAllSchedules(); // Re-render to update colors and order correctly
+                }
+            } else if (target.classList.contains('remove-btn')) {
+                animals = animals.filter(a => a.id !== card.dataset.id);
+                saveAnimals();
+                card.style.transform = 'scale(0.9)';
+                card.style.opacity = '0';
+                setTimeout(() => {
+                    card.remove();
+                    if (animals.length === 0) {
+                        renderAllSchedules();
+                    }
+                }, 300);
+            }
+        }
+
+        // --- EVENT LISTENERS ---
+        tabButtons.forEach(button => button.addEventListener('click', () => switchTab(button.dataset.tab)));
+        modalCloseBtn.addEventListener('click', hideModal);
+        modal.addEventListener('click', (e) => { if(e.target === modal) hideModal(); });
+        animalCategorySelect.addEventListener('change', populateAnimalTypeSelect);
+        animalTypeSelect.addEventListener('change', updateAnimalIconPreview);
+        addAnimalBtn.addEventListener('click', handleAddAnimal);
+        schedulesContainer.addEventListener('click', handleScheduleInteraction);
+        languageSwitcher.addEventListener('change', (e) => setLanguage(e.target.value));
+
+        // --- INITIALIZATION ---
+        function init() {
+            // Add missing animal schedule data by copying from a similar one
+            data.en.schedules['Turkey'] = data.en.schedules['Chicken'];
+            data.en.schedules['Duck'] = data.en.schedules['Chicken'];
+            data.en.schedules['Camel'] = data.en.schedules['Goat'];
+            data.en.schedules['Donkey'] = data.en.schedules['Dog'];
+            
+            loadAnimals();
+            const savedLang = localStorage.getItem(LANG_STORAGE_KEY) || 'en';
+            languageSwitcher.value = savedLang;
+            setLanguage(savedLang);
+            
+            switchTab('tips'); // Set default active tab
+        }
+        
+        init();
+    });
+</script>
+</body></html>
+
