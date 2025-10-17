@@ -1,26 +1,7 @@
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Vaxiliv - Animal Health & Vaccine Tracker</title><!-- PWA Manifest and Theme Color -->
 <meta name="theme-color" content="#065F46">
-<link rel="manifest" href="data:application/manifest+json;charset=utf-8,{
-    &quot;name&quot;: &quot;Vaxiliv - Animal Health & Vaccine Tracker&quot;,
-    &quot;short_name&quot;: &quot;Vaxiliv&quot;,
-    &quot;start_url&quot;: &quot;.&quot;,
-    &quot;display&quot;: &quot;standalone&quot;,
-    &quot;background_color&quot;: &quot;#F0FDF4&quot;,
-    &quot;theme_color&quot;: &quot;#065F46&quot;,
-    &quot;description&quot;: &quot;Your partner in animal health for tracking vaccinations, finding vets, and getting health tips.&quot;,
-    &quot;icons&quot;: [
-        {
-            &quot;src&quot;: &quot;assets/images/icons/icon-192.png&quot;,
-            &quot;sizes&quot;: &quot;192x192&quot;,
-            &quot;type&quot;: &quot;image/png&quot;
-        },
-        {
-            &quot;src&quot;: &quot;assets/images/icons/icon-512.png&quot;,
-            &quot;sizes&quot;: &quot;512x512&quot;,
-            &quot;type&quot;: &quot;image/png&quot;
-        }
-    ]
-}">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="assets/images/icons/icon-192.png">
 
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -58,6 +39,7 @@
     }
     .content-section.active {
         display: block;
+        animation: fadeIn 0.5s ease-out;
     }
     .accordion-header {
         transition: background-color 0.2s ease-in-out;
@@ -72,7 +54,6 @@
     }
     .schedule-card {
         transition: all 0.3s ease;
-        animation: fadeIn 0.5s ease-out;
     }
     .schedule-card:hover {
         transform: translateY(-4px);
@@ -80,8 +61,8 @@
     }
 
     @keyframes fadeIn {
-        from { opacity: 0; transform: scale(0.95); }
-        to { opacity: 1; transform: scale(1); }
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 
     /* Schedule color coding */
@@ -167,10 +148,10 @@
 </style>
 </head><body class="text-gray-800">
 
-<div id="app" class="max-w-lg mx-auto bg-white shadow-2xl rounded-lg min-h-screen">
+<div id="app" class="max-w-5xl mx-auto bg-white shadow-2xl flex flex-col h-screen md:rounded-lg">
 
     <!-- Header -->
-    <header class="bg-pale-green p-4 rounded-t-lg shadow-md">
+    <header class="bg-pale-green p-4 md:rounded-t-lg shadow-md flex-shrink-0">
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <!-- Static Logo -->
@@ -191,18 +172,19 @@
     </header>
 
     <!-- Navigation Tabs -->
-    <nav class="grid grid-cols-4 gap-1 p-2 bg-pale-green text-xs">
+    <nav class="grid grid-cols-5 gap-1 p-2 bg-pale-green text-xs flex-shrink-0">
         <button data-tab="tips" class="tab-btn tab-active font-medium py-2 px-1 rounded-md transition-all duration-300" data-key="tab_tips">Health Tips</button>
         <button data-tab="schedules" class="tab-btn tab-inactive font-medium py-2 px-1 rounded-md transition-all duration-300" data-key="tab_schedules">Schedules</button>
         <button data-tab="locator" class="tab-btn tab-inactive font-medium py-2 px-1 rounded-md transition-all duration-300" data-key="tab_locator">Vet Locator</button>
         <button data-tab="amr" class="tab-btn tab-inactive font-medium py-2 px-1 rounded-md transition-all duration-300" data-key="tab_amr">AMR Info</button>
+        <button data-tab="about" class="tab-btn tab-inactive font-medium py-2 px-1 rounded-md transition-all duration-300" data-key="tab_about">About</button>
     </nav>
 
-    <main class="p-4 pb-16">
+    <main class="p-4 pb-16 flex-grow overflow-y-auto">
 
         <!-- Health & Diet Tips Section -->
         <section id="tips" class="content-section active">
-            <h2 class="text-xl font-bold text-dark-green mb-4" data-key="tips_title">Health & Diet Tips (Kenyan Context)</h2>
+            <h2 class="text-xl font-bold text-dark-green mb-4" data-key="tips_title">Health & Diet Tips</h2>
             <div id="tips-accordion-container" class="space-y-3">
                 <!-- Health tips accordions populated by JS -->
             </div>
@@ -210,6 +192,25 @@
 
         <!-- Vaccination Schedules Section -->
         <section id="schedules" class="content-section">
+            <!-- Vaccination Reminders Section -->
+            <div id="reminders-section" class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 shadow-sm mb-6">
+                <h3 class="font-semibold text-lg mb-3 text-yellow-800 flex items-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bell"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                    <span data-key="reminders_title">Vaccination Reminders</span>
+                </h3>
+                <div id="notification-permission-area">
+                    <p class="text-sm text-yellow-700 mb-3" data-key="reminders_description">Enable notifications to get alerts for upcoming vaccinations.</p>
+                    <button id="enable-notifications-btn" class="w-full bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-yellow-600 transition-all duration-200 flex items-center justify-center space-x-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bell-ring"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="M4 2C2.8 3.7 2 5.7 2 8"/><path d="M20 8c0-2.3-.8-4.3-2-6"/></svg>
+                <span data-key="reminders_enable_button">Enable Notifications</span>
+            </button>
+                    <p id="notification-status" class="text-xs text-center text-gray-500 mt-2"></p>
+                </div>
+                <div id="upcoming-vaccinations-list" class="mt-4 space-y-2">
+                    <!-- Upcoming vaccinations will be listed here -->
+                </div>
+            </div>
+
             <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm mb-6">
                 <h3 class="font-semibold text-lg mb-3" data-key="tracker_add_animal">Add Animal to My Schedules</h3>
                 <div class="space-y-4">
@@ -248,7 +249,7 @@
             </div>
             
             <h2 class="text-xl font-bold text-dark-green mb-4 mt-8" data-key="schedules_title">General Schedules</h2>
-            <p class="text-gray-600 mb-4" data-key="schedules_subtitle">General vaccination and deworming guidelines for Kenya. Always consult a local vet.</p>
+            <p class="text-gray-600 mb-4" data-key="schedules_subtitle">General vaccination and deworming guidelines for. Always consult a local vet.</p>
             <div id="static-schedules-container" class="space-y-3">
                 <!-- Static schedules populated by JS -->
             </div>
@@ -286,7 +287,29 @@
                 </div>
             </div>
         </section>
+        
+        <!-- About Section -->
+        <section id="about" class="content-section">
+            <h2 class="text-xl font-bold text-dark-green mb-4" data-key="about_title">Our Mission</h2>
+            <div class="space-y-4 text-gray-800 leading-relaxed">
+                <p data-key="about_p1"></p>
+                <p data-key="about_p2"></p>
+                <div class="bg-pale-green p-4 rounded-lg border-l-4 border-dark-green">
+                    <p class="font-semibold italic text-dark-green" data-key="about_vision"></p>
+                </div>
+                <p data-key="about_p3"></p>
+                <p class="font-bold" data-key="about_p4"></p>
+                <p class="font-semibold text-dark-green" data-key="about_p5"></p>
+                <p data-key="about_p6"></p>
+            </div>
+        </section>
+
     </main>
+
+    <!-- Footer -->
+    <footer class="text-center p-4 text-xs text-gray-500 bg-gray-50 md:rounded-b-lg flex-shrink-0">
+        JH@2025
+    </footer>
 </div>
 
 <!-- Modal -->
@@ -339,8 +362,8 @@
         // --- DATA (TRANSLATIONS & SCHEDULES) ---
         const data = {
             en: {
-                header_subtitle: "Your Partner in Animal Health",
-                tab_schedules: "Schedules", tab_locator: "Vet Locator", tab_tips: "Health Tips", tab_amr: "AMR Info",
+                header_subtitle: "Because every animal’s life matters.",
+                tab_schedules: "Schedules", tab_locator: "Vet Locator", tab_tips: "Health Tips", tab_amr: "AMR Info", tab_about: "About",
                 tracker_add_animal: "Add Animal to My Schedules", tracker_animal_category: "Animal Category", tracker_animal_type: "Animal Type",
                 tracker_animal_name: "Animal's Name / ID", tracker_animal_dob: "Date of Birth / Acquisition", tracker_add_button: "Add to My Schedules",
                 schedules_title: "General Schedules", schedules_subtitle: "General vaccination and deworming guidelines for Kenya. Always consult a local vet.",
@@ -360,6 +383,23 @@
                 amr_help_3: "<strong>Focus on prevention.</strong> A robust vaccination program is your best defense. Healthy, vaccinated animals have stronger immune systems and are less likely to get sick and require antibiotics. Prevention is always cheaper and more effective than cure.",
                 amr_help_4: "<strong>Champion biosecurity and hygiene.</strong> Clean housing, proper waste management, clean water/feed, and controlled farm access (biosecurity) dramatically reduce the spread of disease, minimizing the need for antibiotics in the first place.",
                 amr_read_more: "Read More on Kenya's National Action Plan for AMR &rarr;",
+                about_title: "Our Mission",
+                about_p1: "Vaxiliv was born from a simple but urgent truth, that access to animal vaccination and livestock health services shouldn’t depend on where you live.",
+                about_p2: "We built this platform to bridge the gap between rural livestock keepers and the veterinary support they deserve. As someone who has walked the dusty paths of Kenya’s north eastern counties, I’ve seen how disease can wipe out entire herds; not for lack of care, but for lack of access. Vaxiliv stands as a response to that reality. It’s more than just a digital space; it’s a movement towards smarter, more connected livestock health.",
+                about_vision: "Our vision is to make vaccination tracking, reporting, and awareness seamless using technology that’s simple enough for every farmer, yet powerful enough for veterinary professionals.",
+                about_p3: "Every line of code here is guided by compassion, science, and a belief that innovation can protect livelihoods.",
+                about_p4: "Because when we protect animals, we protect families, food systems, and futures.",
+                about_p5: "Vaxiliv is not a company, it’s a calling.",
+                about_p6: "It’s our contribution to a future where no farmer is left behind, and every animal’s life counts.",
+                reminders_title: "Vaccination Reminders",
+                reminders_description: "Enable notifications to get alerts for upcoming vaccinations.",
+                reminders_enable_button: "Enable Notifications",
+                reminders_status_granted: "Notifications are enabled!",
+                reminders_status_denied: "Notifications were denied. Please enable them in browser settings.",
+                reminders_no_upcoming: "No upcoming or overdue vaccinations. You're all set!",
+                reminders_overdue: "Overdue",
+                reminders_due_in: "Due in",
+                reminders_days: "days",
                 modal_ok_button: "OK", modal_select_type: "Please select an animal type.", modal_enter_name: "Please enter a name or ID for the animal.", modal_enter_dob: "Please enter a valid date.",
                 animal_name_placeholder: "e.g., Simba, Cow-01",
                 cat_select_category: "Select Category", cat_select_type: "Select Type", cat_prompt_select_category: "First, select a category",
@@ -387,8 +427,8 @@
                 }
             },
             sw: {
-                header_subtitle: "Mshirika Wako Katika Afya ya Wanyama",
-                tab_schedules: "Ratiba", tab_locator: "Tafuta Daktari", tab_tips: "Ushauri wa Afya", tab_amr: "Kuhusu AMR",
+                header_subtitle: "Kwa sababu maisha ya kila mnyama ni muhimu",
+                tab_schedules: "Ratiba", tab_locator: "Tafuta Daktari", tab_tips: "Ushauri wa Afya", tab_amr: "Kuhusu AMR", tab_about: "Kuhusu Sisi",
                 tracker_add_animal: "Ongeza Mnyama Kwenye Ratiba Zangu", tracker_animal_category: "Aina ya Mnyama", tracker_animal_type: "Jamii ya Mnyama",
                 tracker_animal_name: "Jina / Kitambulisho cha Mnyama", tracker_animal_dob: "Tarehe ya Kuzaliwa / Kupatikana", tracker_add_button: "Ongeza Kwenye Ratiba",
                 schedules_title: "Ratiba za Jumla", schedules_subtitle: "Mwongozo wa jumla wa chanjo na minyoo Kenya. Wasiliana na daktari wa mifugo.",
@@ -408,6 +448,23 @@
                 amr_help_3: "<strong>Zingatia kinga.</strong> Mpango thabiti wa chanjo ndiyo kinga yako bora. Wanyama wenye afya na waliochanjwa wana kinga imara na hawana uwezekano mkubwa wa kuugua na kuhitaji antibiotiki. Kinga daima ni rahisi na yenye ufanisi kuliko tiba.",
                 amr_help_4: "<strong>Imarisha usafi na usalama wa kibiolojia (biosecurity).</strong> Mabanda safi, usimamizi bora wa taka, maji/chakula safi, na kudhibiti uingiaji shambani hupunguza sana kuenea kwa magonjwa, na hivyo kupunguza hitaji la antibiotiki.",
                 amr_read_more: "Soma Zaidi kuhusu Mpango Kazi wa Kitaifa wa Kenya wa AMR &rarr;",
+                about_title: "Dhamira Yetu",
+                about_p1: "Vaxiliv ilizaliwa kutokana na ukweli rahisi lakini wa dharura — kwamba upatikanaji wa chanjo za wanyama na huduma za afya ya mifugo haupaswi kutegemea mahali unapoishi.",
+                about_p2: "Nilijenga jukwaa hili ili kuziba pengo kati ya wafugaji wa vijijini na usaidizi wa mifugo wanaostahili. Kama mtu ambaye ametembea katika njia za vumbi za kaunti za kaskazini mwa Kenya, nimeona jinsi magonjwa yanavyoweza kuangamiza mifugo yote — si kwa ukosefu wa huduma, bali kwa ukosefu wa upatikanaji. Vaxiliv ni jibu kwa ukweli huo. Ni zaidi ya nafasi ya kidijitali; ni harakati kuelekea afya bora na iliyounganishwa ya mifugo.",
+                about_vision: "Dira yetu ni kufanya ufuatiliaji wa chanjo, utoaji taarifa, na uhamasishaji kuwa rahisi kwa kutumia teknolojia ambayo ni rahisi kwa kila mkulima, lakini yenye nguvu ya kutosha kwa wataalamu wa mifugo.",
+                about_p3: "Kila mstari wa msimbo hapa unaongozwa na huruma, sayansi, na imani kwamba uvumbuzi unaweza kulinda maisha.",
+                about_p4: "Kwa sababu tunapolinda wanyama, tunalinda familia, mifumo ya chakula, na mustakabali.",
+                about_p5: "Vaxiliv si kampuni, ni wito.",
+                about_p6: "Ni mchango wetu kwa mustakabali ambapo hakuna mkulima anayeachwa nyuma, na maisha ya kila mnyama ni muhimu.",
+                reminders_title: "Vikumbusho vya Chanjo",
+                reminders_description: "Washa arifa ili upate vikumbusho vya chanjo zijazo.",
+                reminders_enable_button: "Washa Arifa",
+                reminders_status_granted: "Arifa zimewashwa!",
+                reminders_status_denied: "Arifa zimekataliwa. Tafadhali zirusu kwenye mipangilio ya kivinjari.",
+                reminders_no_upcoming: "Hakuna chanjo zijazo au zilizopitwa na wakati. Uko sawa!",
+                reminders_overdue: "Imechelewa",
+                reminders_due_in: "Inakuja baada ya",
+                reminders_days: "siku",
                 modal_ok_button: "Sawa", modal_select_type: "Tafadhali chagua aina ya mnyama.", modal_enter_name: "Tafadhali ingiza jina au kitambulisho cha mnyama.", modal_enter_dob: "Tafadhali ingiza tarehe halali.",
                 animal_name_placeholder: "k.m., Simba, Ng'ombe-01",
                 cat_select_category: "Chagua Aina", cat_select_type: "Chagua Jamii", cat_prompt_select_category: "Kwanza, chagua aina",
@@ -426,8 +483,8 @@
                 tips_poultry_content: "<strong>Usalama wa Banda (#1):</strong> Hili ndilo jambo muhimu zaidi. Tumia dawa ya kuua viini mlangoni, zuia wageni, na uzuie kuku wako kuchangamana na ndege wa porini. Safisha na nyunyizia dawa banda lote kati ya kundi moja na jingine.<br><br><strong>Chakula na Maji:</strong> Maji yawe safi kila siku; maji machafu hueneza Coccidiosis. Tumia chakula cha kibiashara kulingana na umri (starter, grower, layer). Kwa Kienyeji, ongeza wadudu (kama funza wa black soldier) na mboga.<br><br><strong>Afya:</strong> Kideri (Newcastle) na Gumboro (IBD) huweza kuua kundi zima. Fuata ratiba ya chanjo kikamilifu. Angalia kuku kila siku kuona dalili za ugonjwa.",
             },
             so: {
-                header_subtitle: "Lammaanahaaga Caafimaadka Xoolaha",
-                tab_schedules: "Jadwalka", tab_locator: "Raadi Dhakhtar", tab_tips: "Talooyin Caafimaad", tab_amr: "Macluumaadka AMR",
+                header_subtitle: "Sababtoo ah nolosha xoolo kasta waa qiimo",
+                tab_schedules: "Jadwalka", tab_locator: "Raadi Dhakhtar", tab_tips: "Talooyin Caafimaad", tab_amr: "Macluumaadka AMR", tab_about: "Nagu Saabsan",
                 tracker_add_animal: "Xayawaan ku dar Jadwalkayga", tracker_animal_category: "Qaybta Xayawaanka", tracker_animal_type: "Nooca Xayawaanka",
                 tracker_animal_name: "Magaca / Aqoonsiga Xayawaanka", tracker_animal_dob: "Taariikhda Dhalashada / Helitaanka", tracker_add_button: "Ku dar Jadwalkayga",
                 schedules_title: "Jadwalka Guud", schedules_subtitle: "Tilmaamaha guud ee tallaalka iyo gooryaanka ee Kenya. Had iyo jeer la tasho dhakhtar xoolaad.",
@@ -436,7 +493,7 @@
                 locator_call_button: "Wac Hadda",
                 tips_title: "Talooyinka Caafimaadka & Cuntada (Kenya)",
                 amr_title: "Iska caabinta Daawooyinka (AMR)",
-                amr_p1: "<strong>Iska caabinta Daawooyinka (AMR)</strong> waa aafo aamusan oo jeermiska (bakteeriyada, fayrasyada, fangaska) ay u kobcaan si ay uga badbaadaan daawaynta. Markaad u isticmaasho antibiyootiga xoolahaaga, jeermiska ugu tabarta daran wuu dhintaa, laakiin kan ugu xooggan wuu badbaadi karaa, wuu tarmi karaa, wuxuuna u gudbin karaa iska caabintiisa. 'Superbugs'-kan ayaa ka dhigaya caabuqyada caadiga ah kuwo ay adag tahay ama aan suurtagal ahayn in la daweeyo.",
+                amr_p1: "<strong>Iska caabinta Daawooyinka (AMR)</strong> waa aafo aamusan oo jeermiska (bakteeriyada, fayrasyada, fangaska) ay u kobcaan si ay uga badbaadaan daawaynta. Markaad u isticmaasho antibiyootiga xoolahaaga, jeermiska ugu tabarta daran wuu dhintaa, laakiin kan ugu xooggan wuu badbaadi karaa, wuu tarmi karaa, wuuna u gudbin karaa iska caabintiisa. 'Superbugs'-kan ayaa ka dhigaya caabuqyada caadiga ah kuwo ay adag tahay ama aan suurtagal ahayn in la daweo.",
                 amr_problem_title: "Waa maxay sababta ay tani dhibaato halis ah u tahay?",
                 amr_problem_p: "Caabuqyada iska caabintu waxay keenaan xanuun dheer oo daran, heerarka dhimashada ee xoolaha oo kordha, iyo khasaare dhaqaale oo aad u weyn oo soo gaara beeralayda sababtoo ah daawaynta oo fashilantay iyo wax soo saarka oo luma. Waxa muhiim ah, bakteeriyadan iska caabisa waxay ka soo gudbi kartaa xoolaha una gudbi kartaa dadka iyada oo loo marayo taabasho toos ah, deegaanka (ciidda, biyaha), iyo silsiladda cuntada, taas oo khatar gelinaysa caafimaadka dadweynaha.",
                 amr_one_health_title: "Xaalad Degdeg ah oo 'Hal Caafimaad'",
@@ -445,8 +502,25 @@
                 amr_help_1: "<strong>Weligaa ha iskaa u qorin antibiyootiko.</strong> Kaliya isticmaal daawooyinka jeermiska dila iyada oo uu ku hagayo dhakhtar xoolaad oo aqoon u leh ka dib baadhitaan sax ah. Iibsashada antibiyootiga farmashiyaha iyo qiyaasida qiyaasta waa khatar waxayna hurinaysaa iska caabinta.",
                 amr_help_2: "<strong>Sii qiyaasta saxda ah muddada oo dhan.</strong> Qiyaasta oo la dhimo ama daawaynta oo goor hore la joojiyo waxay u oggolaanaysaa bakteeriyada ugu iska caabinta badan inay badbaado oo ay korto. Dhamaystir koorsada laguu qoray, xitaa haddii xayawaanku u muuqdo inuu soo roonaaday.",
                 amr_help_3: "<strong>Diirada saar ka hortagga.</strong> Barnaamij tallaal oo adag ayaa ah difaacaaga ugu fiican. Xoolaha caafimaadka qaba ee la tallaalay waxay leeyihiin habdhiska difaaca oo xooggan waxayna u yar tahay inay bukoodaan oo ay u baahdaan antibiyootiko. Ka hortaggu mar walba wuu ka jaban yahay wuuna ka waxtar badan yahay daawaynta.",
-                amr_help_4: "<strong>Horyaal u noqo nadaafadda iyo badbaadada noolaha.</strong> Guryaha nadiifka ah, maaraynta qashinka ee habboon, biyo/cuno nadiif ah, iyo helitaanka beerta oo la xakameeyo (badbaadada noolaha) waxay si weyn u yareeyaan faafitaanka cudurrada, iyagoo yareynaya baahida loo qabo antibiyootiga meesha ugu horreysa.",
+                amr_help_4: "<strong>Horyaal u noqo nadaafadda iyo badbaadada noolaha.</strong> Guryaha nadiifka ah, maaraynta qashinka ee habboon, biyo/cuno nadiif ah, iyo helitaanka beerta oo la xakameo (badbaadada noolaha) waxay si weyn u yareeyaan faafitaanka cudurrada, iyagoo yareynaya baahida loo qabo antibiyootiga meesha ugu horreysa.",
                 amr_read_more: "Wax Badan Ka Akhriso Qorshaha Waxqabadka Qaranka Kenya ee AMR &rarr;",
+                about_title: "Hadafkayaga",
+                about_p1: "Vaxiliv waxay ka dhalatay run fudud laakiin degdeg ah - in helitaanka tallaalka xoolaha iyo adeegyada caafimaadka xoolaha aysan ku xirnaan meesha aad ku nooshahay.",
+                about_p2: "Waxaan dhisay barnaamijkan si aan isugu xiro farqiga u dhexeeya xoolo-dhaqatada reer miyiga ah iyo taageerada xanaanada xoolaha ee ay u qalmaan. Anigoo ah qof ku soo lugeeyay waddooyinka boodhka leh ee gobollada waqooyi ee Kenya, waxaan arkay sida cudurku u tirtiri karo adhyo dhan - maaha daryeel la'aan, laakiin helitaan la'aan. Vaxiliv waxay u taagan tahay jawaabta xaqiiqadaas. Waa wax ka badan meel dijitaal ah; waa dhaqdhaqaaq ku wajahan caafimaad xoolaad oo caqli badan oo isku xiran.",
+                about_vision: "Aragtidayadu waa inaan ka dhigno la socodka tallaalka, warbixinta, iyo wacyigelinta si aan kala go' lahayn iyadoo la isticmaalayo tignoolajiyad ku filan beeralay kasta, haddana awood ku filan xirfadlayaasha xanaanada xoolaha.",
+                about_p3: "Xariiq kasta oo koodh ah oo halkan ku yaal waxaa hagaya naxariis, saynis, iyo aaminaad ah in hal-abuurnimadu ay ilaalin karto nolosha.",
+                about_p4: "Sababtoo ah marka aan ilaalino xoolaha, waxaan ilaalinaa qoysaska, nidaamyada cuntada, iyo mustaqbalka.",
+                about_p5: "Vaxiliv maaha shirkad, waa wicitaan.",
+                about_p6: "Waa tabarucaadkayaga mustaqbal aan beeraleyna looga tagin, nolosha xoolo kastana ay xisaabsan tahay.",
+                reminders_title: "Xasuusinta Tallaalka",
+                reminders_description: "Daar ogeysiisyada si aad u hesho xasuusin ku saabsan tallaalada soo socda.",
+                reminders_enable_button: "Daar Ogeysiisyada",
+                reminders_status_granted: "Ogeysiisyada waa la daaray!",
+                reminders_status_denied: "Ogeysiisyada waa la diiday. Fadlan ka oggolow goobaha biraawsarka.",
+                reminders_no_upcoming: "Ma jiraan tallaallo soo socda ama kuwo wakhtigoodii dhaafay. Waa laguu wada diyaariyey!",
+                reminders_overdue: "Wakhtigii dhaafay",
+                reminders_due_in: "Ku eg",
+                reminders_days: "maalmood",
                 modal_ok_button: "Hagaag", modal_select_type: "Fadlan dooro nooca xayawaanka.", modal_enter_name: "Fadlan geli magaca ama aqoonsiga xayawaanka.", modal_enter_dob: "Fadlan geli taariikh sax ah.",
                 animal_name_placeholder: "tusaale, Simba, Lo'-01",
                 cat_select_category: "Dooro Qayb", cat_select_type: "Dooro Nooc", cat_prompt_select_category: "Marka hore, dooro qayb",
@@ -487,6 +561,9 @@
         const modalCloseBtn = document.getElementById('modal-close');
         const languageSwitcher = document.getElementById('language-switcher');
         const animalIconPreview = document.getElementById('animal-icon-preview');
+        const enableNotificationsBtn = document.getElementById('enable-notifications-btn');
+        const notificationStatus = document.getElementById('notification-status');
+        const upcomingVaccinationsList = document.getElementById('upcoming-vaccinations-list');
 
 
         // --- FUNCTIONS ---
@@ -639,6 +716,7 @@
                 animals.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
                 animals.forEach(animal => renderScheduleCard(animal));
             }
+            renderReminders(); // Refresh reminders when schedules change
         }
         
         function createAccordionItem(id, title, content, image = '') {
@@ -878,6 +956,170 @@
             }
         }
 
+        function updateNotificationUI() {
+            const t = data[currentLang];
+            if (!('Notification' in window)) {
+                enableNotificationsBtn.disabled = true;
+                notificationStatus.textContent = "Notifications not supported on this browser.";
+                return;
+            }
+
+            switch (Notification.permission) {
+                case 'granted':
+                    enableNotificationsBtn.style.display = 'none';
+                    notificationStatus.textContent = t.reminders_status_granted;
+                    notificationStatus.className = 'text-xs text-center text-green-600 mt-2';
+                    break;
+                case 'denied':
+                    enableNotificationsBtn.style.display = 'none';
+                    notificationStatus.textContent = t.reminders_status_denied;
+                    notificationStatus.className = 'text-xs text-center text-red-600 mt-2';
+                    break;
+                default:
+                    enableNotificationsBtn.style.display = 'flex';
+                    notificationStatus.textContent = '';
+                    break;
+            }
+        }
+
+        function requestNotificationPermission() {
+            if (!('Notification' in window)) {
+                alert("This browser does not support desktop notification");
+                return;
+            }
+            
+            Notification.requestPermission().then(permission => {
+                updateNotificationUI();
+                if (permission === 'granted') {
+                    // Show a confirmation notification
+                    new Notification('Vaxiliv Reminders', {
+                        body: 'You will now receive vaccination reminders!',
+                        icon: 'assets/images/icons/icon-192.png'
+                    });
+                }
+            });
+        }
+        
+        function renderReminders() {
+            const t = data[currentLang];
+            upcomingVaccinationsList.innerHTML = '';
+            const reminders = [];
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            
+            const sevenDaysFromNow = new Date(today);
+            sevenDaysFromNow.setDate(today.getDate() + 7);
+
+            animals.forEach(animal => {
+                const animalTypeKeyCap = animal.type.charAt(0).toUpperCase() + animal.type.slice(1);
+                const scheduleData = data.en.schedules[animalTypeKeyCap] || [];
+                const dob = new Date(animal.dob);
+
+                scheduleData.forEach((item, index) => {
+                    if (!animal.completed[index]) {
+                        const dueDate = getDueDate(dob, item.duration);
+                        if (dueDate <= sevenDaysFromNow) {
+                            reminders.push({ animal, item, dueDate });
+                        }
+                    }
+                });
+            });
+
+            reminders.sort((a, b) => a.dueDate - b.dueDate);
+
+            if (reminders.length === 0) {
+                upcomingVaccinationsList.innerHTML = `<p class="text-sm text-center text-gray-500 italic">${t.reminders_no_upcoming}</p>`;
+                return;
+            }
+            
+            reminders.forEach(({ animal, item, dueDate }) => {
+                const diffTime = dueDate.getTime() - today.getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                let statusText, statusClass;
+                if (diffDays < 0) {
+                    statusText = t.reminders_overdue;
+                    statusClass = 'text-red-600';
+                } else {
+                    statusText = `${t.reminders_due_in} ${diffDays} ${t.reminders_days}`;
+                    statusClass = 'text-yellow-700';
+                }
+
+                const reminderEl = document.createElement('div');
+                reminderEl.className = 'flex items-center justify-between p-2 bg-white rounded-md border';
+                reminderEl.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <img src="${animalImages[animal.type]}" alt="${animal.type}" class="w-8 h-8">
+                        <div>
+                            <p class="font-semibold text-sm">${item.vaccine}</p>
+                            <p class="text-xs text-gray-600">${animal.name}</p>
+                        </div>
+                    </div>
+                    <p class="text-xs font-medium ${statusClass}">${statusText}</p>
+                `;
+                upcomingVaccinationsList.appendChild(reminderEl);
+            });
+        }
+
+        function checkAndSendReminders() {
+            if (Notification.permission !== 'granted') {
+                return; // Only run if permission is granted
+            }
+
+            const SENT_NOTIFICATIONS_KEY = 'vaxiliv_sent_notifications_v1';
+            const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+            let sentNotifications;
+            try {
+                sentNotifications = JSON.parse(localStorage.getItem(SENT_NOTIFICATIONS_KEY)) || {};
+            } catch (e) {
+                sentNotifications = {};
+            }
+
+            if (sentNotifications.date !== today) {
+                sentNotifications = { date: today, sent: [] };
+            }
+
+            const notificationsToSend = [];
+
+            animals.forEach(animal => {
+                const animalTypeKeyCap = animal.type.charAt(0).toUpperCase() + animal.type.slice(1);
+                const scheduleData = data.en.schedules[animalTypeKeyCap] || [];
+                const dob = new Date(animal.dob);
+
+                scheduleData.forEach((item, index) => {
+                    if (!animal.completed[index]) {
+                        const dueDate = getDueDate(dob, item.duration);
+                        const dueDateString = dueDate.toISOString().slice(0, 10);
+                        const notificationId = `${animal.id}-${index}`;
+
+                        if (dueDateString === today && !sentNotifications.sent.includes(notificationId)) {
+                            notificationsToSend.push({
+                                title: `Vaxiliv Reminder: ${animal.name}`,
+                                body: `${item.vaccine} is due today!`,
+                                id: notificationId
+                            });
+                        }
+                    }
+                });
+            });
+
+            if (notificationsToSend.length > 0) {
+                navigator.serviceWorker.ready.then(registration => {
+                    notificationsToSend.forEach(notification => {
+                        registration.showNotification(notification.title, {
+                            body: notification.body,
+                            icon: 'assets/images/icons/icon-192.png',
+                            tag: notification.id // Tag prevents duplicate notifications
+                        });
+                        sentNotifications.sent.push(notification.id);
+                    });
+                    localStorage.setItem(SENT_NOTIFICATIONS_KEY, JSON.stringify(sentNotifications));
+                });
+            }
+        }
+
+
         // --- EVENT LISTENERS ---
         tabButtons.forEach(button => button.addEventListener('click', () => switchTab(button.dataset.tab)));
         modalCloseBtn.addEventListener('click', hideModal);
@@ -887,6 +1129,7 @@
         addAnimalBtn.addEventListener('click', handleAddAnimal);
         schedulesContainer.addEventListener('click', handleScheduleInteraction);
         languageSwitcher.addEventListener('change', (e) => setLanguage(e.target.value));
+        enableNotificationsBtn.addEventListener('click', requestNotificationPermission);
 
         // --- INITIALIZATION ---
         function init() {
@@ -900,8 +1143,20 @@
             const savedLang = localStorage.getItem(LANG_STORAGE_KEY) || 'en';
             languageSwitcher.value = savedLang;
             setLanguage(savedLang);
+            updateNotificationUI();
+            checkAndSendReminders();
             
-            switchTab('tips'); // Set default active tab
+            // Set tab based on URL hash, if present
+            if(window.location.hash) {
+                const tab = window.location.hash.substring(1);
+                if(document.querySelector(`[data-tab="${tab}"]`)) {
+                    switchTab(tab);
+                } else {
+                    switchTab('tips');
+                }
+            } else {
+                switchTab('tips'); // Default active tab
+            }
         }
         
         init();
