@@ -1,9 +1,8 @@
-// Updated sw.js file
+// The final, corrected sw.js file
 const CACHE_NAME = 'vaxiliv-cache-v1';
 
-// List all the essential files that need to be cached to work offline
 const URLS_TO_CACHE = [
-  'index3.html',
+  'index.html',  // <-- This is the only line that changed
   'data.json',
   'vets.json',
   'manifest.json',
