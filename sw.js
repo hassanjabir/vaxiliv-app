@@ -1,5 +1,5 @@
 // A unique name for the cache. Using a version number helps in managing updates.
-const CACHE_NAME = 'vaxiliv-cache-v1.3';
+const CACHE_NAME = 'vaxiliv-cache-v1.4';
 
 // A list of all the essential files your app needs to work offline.
 // This is the "app shell".
@@ -107,4 +107,5 @@ self.addEventListener('fetch', event => {
   );
 
 });
+
 
